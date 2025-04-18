@@ -1,0 +1,8 @@
+output
+/build
+/release
+
+*.out
+*.exe
+
+idea.txt
