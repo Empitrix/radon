@@ -117,7 +117,7 @@ void updateController(controller_t *ctrl){
 		}
 
 		if(ckey == KEY_TAB){
-			for(int i = 0; i < ctrl->index; i++){
+			for(int i = 0; i < ctrl->tabsize; i++){
 				modify_buffer(ctrl, ' ', INSERT_MODE);
 			}
 		}
