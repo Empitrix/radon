@@ -11,14 +11,16 @@
 
 
 typedef struct {
-	char buffer[MAXBUF];  // Buffer
-	Font font;            // Config Font
-	uint32_t index;       // Index (Buf pos)
-	int tabsize;          // Tab size
-	int spacing;          // Letter spacing
-	int hscroll;          // Horizontal Scroll Offset
-	int vscroll;          // Vertical Scroll Offset
-	uint8_t blinky;       // Cursor
+	char buffer[MAXBUF];     // Buffer
+	char font_path[128];     // Buffer
+	Font font;               // Config Font
+	uint32_t index;          // Index (Buf pos)
+	int tabsize;             // Tab size
+	int spacing;             // Letter spacing
+	int hscroll;             // Horizontal Scroll Offset
+	int vscroll;             // Vertical Scroll Offset
+	uint8_t blinky;          // Cursor
+	uint8_t fontsize;        // Font Size
 } controller_t;
 
 
@@ -32,14 +34,16 @@ void *blink_cursor(void *arg){
 	return NULL;
 }
 
-controller_t *initController(controller_t *ctrl, Font font, int tabsize, int spacing){
-	ctrl->font = font;
+controller_t *initController(controller_t *ctrl, const char* font_path, int fontsize, int tabsize, int spacing){
+	strcpy(ctrl->font_path, font_path);
+	ctrl->font = LoadFontEx(font_path, fontsize, NULL, 540);
 	ctrl->index = 0;
 	ctrl->tabsize = tabsize;
 	ctrl->spacing = spacing;
 	ctrl->hscroll = 0;
 	ctrl->vscroll = 0;
 	ctrl->blinky = 1;
+	ctrl->fontsize = fontsize;
 	exe_thread(blink_cursor, ctrl);  // Start Blinky
 	return ctrl;
 }
@@ -131,6 +135,25 @@ void updateController(controller_t *ctrl){
 		}
 
 
+		if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
+			if(IsFontValid(ctrl->font)){
+				if(ctrl->fontsize < 255){
+					UnloadFont(ctrl->font);
+					ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", ++ctrl->fontsize, NULL, 540);
+				}
+			}
+			// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
+		}
+
+		if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
+			if(IsFontValid(ctrl->font)){
+				if(ctrl->fontsize > 1){
+					UnloadFont(ctrl->font);
+					ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", --ctrl->fontsize, NULL, 540);
+				}
+			}
+			// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
+		}
 
 		if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
 			const char *text = GetClipboardText();
