@@ -1,46 +1,46 @@
 #include <raylib.h>
 #include "controller.h"
 #include "config.h"
-#include "utils.h"
 
+
+
+void render_cursor(controller_t *ctrl, int padding);
 
 void render_buffer(controller_t *ctrl){
-	int line_y = 0;
 	const char *start = ctrl->buffer;
-	const char *end;
+	int letter_factor = ctrl->fontsize + ctrl->spacing;  // Compile-Time Letter Size (SIZE FACTOR)
+	int margin = 0;
 
-	while (*start) {
-		end = strchr(start, '\n');
-		int len = end ? (end - start) : strlen(start);
+	controllerUpdateBuffer(ctrl);
 
-		char line[1024];
-		strncpy(line, start, len);
-		line[len] = '\0';
+	int numLineSize = 0;
 
-		DrawTextEx(ctrl->font, line, V2(-ctrl->hscroll, line_y -ctrl->vscroll), ctrl->font.baseSize, ctrl->spacing, BLACK);
-
-		line_y += ctrl->font.baseSize + ctrl->spacing;
-		start = end ? end + 1 : NULL;
-		if (!start) break;
+	for(int i = 0; i < ctrl->lines.cln; i++){
+		DrawTextEx(ctrl->font, ctrl->lines.lines[i], V2(-ctrl->hscroll + numLineSize, (i * letter_factor)-ctrl->vscroll), ctrl->font.baseSize, ctrl->spacing, BLACK);
 	}
+
+	render_cursor(ctrl, numLineSize);
 }
 
 
 
-void render_cursor(controller_t *ctrl, Color bg_color){
-	int buffer_size = (int)strlen(ctrl->buffer);
-	int last_line = last_line_length(ctrl->buffer);
-	int cntr = 0;
-	int nlines = 0;  // Number of lines
-	while(cntr < buffer_size){
-		if(ctrl->buffer[cntr] == '\n'){ nlines++; }
-		cntr++;
+
+void render_cursor(controller_t *ctrl, int padding){
+	const char *buffer = ctrl->buffer;
+	int width = 0, height = 0, spacing = 2, cursor_width = 3;
+
+
+	int factor = ctrl->fontsize + ctrl->spacing;
+
+	while(*buffer){
+		if(*buffer == '\n'){ width = 0, height++; } else { width++; }
+		buffer++;
+		if(0){ break; }
 	}
 
+	if(ctrl->blinky){
+		DrawRectangle(((width * factor) / 2) + spacing, height * factor, cursor_width, ctrl->fontsize, BLUE);
+	}
 
-	int x = MeasureTextEx(ctrl->font, get_last_line(ctrl->buffer), ctrl->font.baseSize, ctrl->spacing).x;
-	int y = MeasureTextEx(ctrl->font, ctrl->buffer, ctrl->font.baseSize, ctrl->spacing).y;
-	if(y == 0){ y += ctrl->font.baseSize; }
-	//DrawRectangle(x + 2 - horz_scroll_offset, y - fontsize - vert_scroll_offset, 3, fontsize, swapper ? BLUE : bg_color);
-	DrawRectangle(x + 2 - ctrl->hscroll, (nlines * (ctrl->font.baseSize + ctrl->spacing)) - ctrl->vscroll, 3, ctrl->font.baseSize, ctrl->blinky ? BLUE : bg_color);
 }
+

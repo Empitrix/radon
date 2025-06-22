@@ -1,10 +1,15 @@
-all:
-	@ cc -o output -lm -lraylib ./main.c
+INPUT = main.c
+OUTPUT = radon
+COMPILER = cc
+FLAGS = -lraylib
+
+compile:
+	@ $(COMPILER) -o $(OUTPUT) $(FLAGS) $(INPUT)
 
 run:
-	@ ./output
+	@ ./$(OUTPUT)
 
-total:
-	@ $(MAKE) all --no-print-directory
+quick:
+	@ $(MAKE) compile --no-print-directory
 	@ $(MAKE) run --no-print-directory
 
