@@ -5,6 +5,7 @@
 #include <string.h>
 #include <unistd.h>
 #include "thread.h"
+#include "utils.h"
 #include <stdlib.h>
 
 #define MAXBUF 1024 * 1024  // 1MB buffer
@@ -27,9 +28,15 @@ typedef enum {
 
 
 typedef struct {
+	int x;
+	int y;
+} pos_t;
+
+typedef struct {
 	cursor_mode mode;
-	int currentPos;
-	int extendPos;
+	pos_t current;
+	pos_t extend;
+	int max;
 } cursor_t;
 
 
@@ -66,7 +73,7 @@ void *blink_cursor(void *arg){
 
 
 cursor_t cursorDefaultInit(void){
-	return (cursor_t){ .mode = CURSOR_WRITE, .currentPos = 0, .extendPos = 0 };
+	return (cursor_t){ .mode = CURSOR_WRITE, .current = (pos_t){0, 0}, .extend = (pos_t){0, 0}, .max = 0 };
 }
 
 
@@ -101,6 +108,23 @@ void controllerSetWindowSize(controller_t *ctrl, int width, int height){
 }
 
 
+void updateCursorCurrentPos(controller_t *ctrl){
+	int height = 0, width = 0;
+	int i = 0;
+	while(i <= ctrl->index){
+		if(ctrl->buffer[i] == '\n'){
+			height++;
+			width = 0;
+		} else {
+			width++;
+		}
+		i++;
+	}
+	ctrl->cursor.current.x = width - 1;
+	ctrl->cursor.current.y = height;
+}
+
+
 
 void controllerUpdateBuffer(controller_t *ctrl){
 	// lines[cln][...........]
@@ -120,6 +144,12 @@ void controllerUpdateBuffer(controller_t *ctrl){
 		start++;
 	}
 	strcpy(ctrl->lines.lines[ctrl->lines.cln++], ctrl->lines.hold);
+
+
+
+	// Update curosr.max
+	ctrl->cursor.max = (int)strlen(ctrl->lines.lines[ctrl->lines.cln - 1]);
+
 }
 
 
@@ -133,10 +163,10 @@ typedef enum {
 void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 	switch(mode){
 		case INSERT_MODE:
-			ctrl->buffer[ctrl->index++] = ch;
+			insertCharAt(ctrl->buffer, (ctrl->index++ - 1), ch);
 			break;
 		case REMOVE_MODE:
-			ctrl->buffer[--ctrl->index] = '\0';
+			removeCharAt(ctrl->buffer, --ctrl->index);
 			break;
 		default: break;
 	}
@@ -167,83 +197,105 @@ void remove_word(controller_t *ctrl){
 
 
 void updateController(controller_t *ctrl){
-		char ch = '\0';
-		if((ch = GetCharPressed()) != '\0' && ctrl->index != MAXBUF){
-			modify_buffer(ctrl, ch, INSERT_MODE);
-		}
+	char ch = '\0';
+	if((ch = GetCharPressed()) != '\0' && ctrl->index != MAXBUF){
+		modify_buffer(ctrl, ch, INSERT_MODE);
+	}
 
-		KeyboardKey ckey = GetKeyPressed();
+	KeyboardKey ckey = GetKeyPressed();
 
-		if (ckey == KEY_BACKSPACE && ctrl->index != 0) {
-			if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
-				remove_word(ctrl);
-			} else {
-				modify_buffer(ctrl, '\0', REMOVE_MODE);
-			}
-		}
-
-		if(IsKeyPressedRepeat(KEY_BACKSPACE) && ctrl->index != 0){
+	if (ckey == KEY_BACKSPACE && ctrl->index != 0) {
+		if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+			remove_word(ctrl);
+		} else {
 			modify_buffer(ctrl, '\0', REMOVE_MODE);
 		}
+	}
 
-		if(ckey == KEY_ENTER){
-			modify_buffer(ctrl, '\n', INSERT_MODE);
-			// printf("%d\n", ctrl->vscroll);
+	if(IsKeyPressedRepeat(KEY_BACKSPACE) && ctrl->index != 0){
+		modify_buffer(ctrl, '\0', REMOVE_MODE);
+	}
+
+	if(ckey == KEY_ENTER){
+		modify_buffer(ctrl, '\n', INSERT_MODE);
+		// printf("%d\n", ctrl->vscroll);
+	}
+
+	if(ckey == KEY_TAB){
+		for(int i = 0; i < ctrl->tabsize; i++){
+			modify_buffer(ctrl, ' ', INSERT_MODE);
 		}
+	}
 
-		if(ckey == KEY_TAB){
-			for(int i = 0; i < ctrl->tabsize; i++){
-				modify_buffer(ctrl, ' ', INSERT_MODE);
+	if(IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)){
+		ctrl->hscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
+		if(ctrl->hscroll < 0){
+			ctrl->hscroll = 0;
+		}
+	} else {
+		ctrl->vscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
+		if(ctrl->vscroll < 0){
+			ctrl->vscroll = 0;
+		}
+	}
+
+
+	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
+		if(IsFontValid(ctrl->font)){
+			if(ctrl->fontsize < 255){
+				UnloadFont(ctrl->font);
+				ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", ++ctrl->fontsize, NULL, 540);
 			}
 		}
+		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
+	}
 
-		if(IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)){
-			ctrl->hscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
-			if(ctrl->hscroll < 0){
-				ctrl->hscroll = 0;
-			}
-		} else {
-			ctrl->vscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
-			if(ctrl->vscroll < 0){
-				ctrl->vscroll = 0;
+	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
+		if(IsFontValid(ctrl->font)){
+			if(ctrl->fontsize > 1){
+				UnloadFont(ctrl->font);
+				ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", --ctrl->fontsize, NULL, 540);
 			}
 		}
+		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
+	}
 
-
-		if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
-			if(IsFontValid(ctrl->font)){
-				if(ctrl->fontsize < 255){
-					UnloadFont(ctrl->font);
-					ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", ++ctrl->fontsize, NULL, 540);
-				}
-			}
-			// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
-		}
-
-		if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
-			if(IsFontValid(ctrl->font)){
-				if(ctrl->fontsize > 1){
-					UnloadFont(ctrl->font);
-					ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", --ctrl->fontsize, NULL, 540);
-				}
-			}
-			// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
-		}
-
-		if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
-			const char *text = GetClipboardText();
-			for(int i = 0; i < (int)strlen(text); i++){
-				switch(text[i]){
-					case '\t':
-						for(int i = 0; i < ctrl->tabsize; i++){
-							modify_buffer(ctrl, ' ', INSERT_MODE);
-						}
-						break;
-					default:
-						modify_buffer(ctrl, text[i], INSERT_MODE);
-						break;
-				}
+	if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
+		const char *text = GetClipboardText();
+		for(int i = 0; i < (int)strlen(text); i++){
+			switch(text[i]){
+				case '\t':
+					for(int i = 0; i < ctrl->tabsize; i++){
+						modify_buffer(ctrl, ' ', INSERT_MODE);
+					}
+					break;
+				default:
+					modify_buffer(ctrl, text[i], INSERT_MODE);
+					break;
 			}
 		}
+	}
 
+
+	// Cursor
+	if(IsKeyPressed(KEY_RIGHT)){
+		if(ctrl->index < (int)strlen(ctrl->buffer)){
+			ctrl->index++;
+		}
+		// printf("%d -> %d\n", (int)strlen(ctrl->buffer), ctrl->index);
+		ctrl->blinky = 1;
+	}
+
+	if(IsKeyPressed(KEY_LEFT)){
+		if(ctrl->index){
+			ctrl->index--;
+		}
+		// printf("%d -> %d\n", (int)strlen(ctrl->buffer), ctrl->index);
+		ctrl->blinky = 1;
+	}
+
+	// updateCursorCurrentPos(ctrl);
 }
+
+
+
