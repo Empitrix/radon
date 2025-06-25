@@ -80,3 +80,14 @@ void removeCharAt(char *buff, int pos){
 		buff[i] = buff[i + 1];
 	}
 }
+
+
+
+
+void getNextPos(const char *buff, const char *txt){
+}
+
+void getLastPos(const char *buff, const char *txt){
+}
+
+

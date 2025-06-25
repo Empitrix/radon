@@ -31,7 +31,9 @@ int main(){
 
 	int borderWidth = _width / 1.3, borderHeight = _height;  // Test specifiers
 
-	controllerInit(&ctrl, "assets/HackNerdFont-Regular.ttf", fontsize, tabsize, spacing);
+	// controllerInit(&ctrl, "assets/HackNerdFont-Regular.ttf", fontsize, tabsize, spacing);
+	controllerInit(&ctrl, "assets/CourierPrime-Regular.ttf", fontsize, tabsize, spacing);
+
 	controllerSetWindowSize(&ctrl, borderWidth, borderHeight);
 
 
@@ -65,6 +67,19 @@ int main(){
 		BeginDrawing();
 		ClearBackground(RAYWHITE);
 
+		// // Selection
+		// if(IsKeyDown(KEY_LEFT_CONTROL)){
+		// 	printf("Should Work!\n");
+		// 	// if(ctrl->index){
+		// 	// 	ctrl->index--;
+		// 	// }
+		// 	// ctrl->blinky = 1;
+		// }
+
+
+		// if(IsKeyPressed(KEY_LEFT) && IsKeyDown(KEY_LEFT_CONTROL)){
+		// 	printf("+++++++++++!\n");
+		// }
 
 		// controllerUpdateBuffer(&ctrl);
 		render_buffer(&ctrl);

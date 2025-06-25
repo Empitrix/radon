@@ -32,12 +32,22 @@ typedef struct {
 	int y;
 } pos_t;
 
+
+typedef struct {
+	int start;
+	int end;
+} range_t;
+
+
+
 typedef struct {
 	cursor_mode mode;
+	range_t selection;         // Range of the selected text [start, end]
 	pos_t current;
 	pos_t extend;
 	int max;
 } cursor_t;
+
 
 
 
@@ -73,7 +83,14 @@ void *blink_cursor(void *arg){
 
 
 cursor_t cursorDefaultInit(void){
-	return (cursor_t){ .mode = CURSOR_WRITE, .current = (pos_t){0, 0}, .extend = (pos_t){0, 0}, .max = 0 };
+	return (cursor_t){
+		.mode = CURSOR_WRITE,
+		.current = (pos_t){0, 0},
+		.extend = (pos_t){0, 0},
+		.max = 0,
+		// .selection = (range_t){2, 12}
+		.selection = (range_t){0, 0}
+	};
 }
 
 
@@ -122,6 +139,8 @@ void updateCursorCurrentPos(controller_t *ctrl){
 	}
 	ctrl->cursor.current.x = width - 1;
 	ctrl->cursor.current.y = height;
+
+	// ctrl->cursor.selection = (range_t){ ctrl->cursor.current.x,  ctrl->cursor.current.x };
 }
 
 
@@ -170,6 +189,8 @@ void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 			break;
 		default: break;
 	}
+	ctrl->cursor.mode = CURSOR_WRITE;
+	ctrl->cursor.selection = (range_t){ctrl->index, ctrl->index};
 	ctrl->blinky = 1;
 }
 
@@ -205,7 +226,7 @@ void updateController(controller_t *ctrl){
 	KeyboardKey ckey = GetKeyPressed();
 
 	if (ckey == KEY_BACKSPACE && ctrl->index != 0) {
-		if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+		if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) {
 			remove_word(ctrl);
 		} else {
 			modify_buffer(ctrl, '\0', REMOVE_MODE);
@@ -227,7 +248,7 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
-	if(IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)){
+	if(IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)){
 		ctrl->hscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
 		if(ctrl->hscroll < 0){
 			ctrl->hscroll = 0;
@@ -240,27 +261,27 @@ void updateController(controller_t *ctrl){
 	}
 
 
-	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
+	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
 		if(IsFontValid(ctrl->font)){
 			if(ctrl->fontsize < 255){
 				UnloadFont(ctrl->font);
-				ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", ++ctrl->fontsize, NULL, 540);
+				ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
 			}
 		}
 		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
 	}
 
-	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
+	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
 		if(IsFontValid(ctrl->font)){
 			if(ctrl->fontsize > 1){
 				UnloadFont(ctrl->font);
-				ctrl->font = LoadFontEx("assets/HackNerdFont-Regular.ttf", --ctrl->fontsize, NULL, 540);
+				ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
 			}
 		}
 		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
 	}
 
-	if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
+	if ((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
 		const char *text = GetClipboardText();
 		for(int i = 0; i < (int)strlen(text); i++){
 			switch(text[i]){
@@ -277,24 +298,66 @@ void updateController(controller_t *ctrl){
 	}
 
 
-	// Cursor
 	if(IsKeyPressed(KEY_RIGHT)){
 		if(ctrl->index < (int)strlen(ctrl->buffer)){
 			ctrl->index++;
 		}
-		// printf("%d -> %d\n", (int)strlen(ctrl->buffer), ctrl->index);
 		ctrl->blinky = 1;
 	}
+
 
 	if(IsKeyPressed(KEY_LEFT)){
 		if(ctrl->index){
 			ctrl->index--;
 		}
-		// printf("%d -> %d\n", (int)strlen(ctrl->buffer), ctrl->index);
 		ctrl->blinky = 1;
 	}
 
-	// updateCursorCurrentPos(ctrl);
+	if(IsKeyPressed(KEY_RIGHT) && IsKeyDown(KEY_LEFT_SHIFT)){
+		if(ctrl->cursor.mode == CURSOR_WRITE){
+			ctrl->cursor.selection.start = ctrl->index - 1;
+			ctrl->cursor.selection.end = ctrl->index;
+			ctrl->cursor.mode = CURSOR_SELECT;
+		} else {
+			ctrl->cursor.selection.end = ctrl->index;
+		}
+	}
+
+	if(IsKeyPressed(KEY_LEFT) && IsKeyDown(KEY_LEFT_SHIFT)){
+		if(ctrl->cursor.mode == CURSOR_WRITE){
+			ctrl->cursor.selection.end = ctrl->index + 1;
+			ctrl->cursor.selection.start = ctrl->index;
+			ctrl->cursor.mode = CURSOR_SELECT;
+		} else {
+			ctrl->cursor.selection.start = ctrl->index;
+		}
+	}
+
+
+
+	if((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) && !IsKeyDown(KEY_LEFT_SHIFT)){
+		ctrl->cursor.selection.start = ctrl->index;
+		ctrl->cursor.selection.end = ctrl->index;
+	}
+
+
+	// Set the cursor at the end of the line
+	if(IsKeyPressed(KEY_END)){
+		if(ctrl->index != strlen(ctrl->buffer) - 1){ ctrl->index++; }
+		while(ctrl->buffer[ctrl->index] != '\n' && ctrl->buffer[ctrl->index] != '\0' && ctrl->index < (int)strlen(ctrl->buffer)){
+			ctrl->index++;
+		}
+	}
+
+	// Set the cursor at the begining of the line
+	if(IsKeyPressed(KEY_HOME)){
+		if(strlen(ctrl->buffer) != 0){ ctrl->index--; }
+		while(ctrl->buffer[ctrl->index] != '\n' && ctrl->buffer[ctrl->index] != '\0' && ctrl->index > 0){
+			ctrl->index--;
+		}
+		if(ctrl->index > 0){ ctrl->index++; }
+	}
+
 }
 
 
