@@ -55,31 +55,57 @@ void insertBuffAt(char *buff, int pos, const char *txt){
 }
 
 
-void insertCharAt(char *buff, int pos, const char txt){
-	static char beforeBuff[MAXBUF] = { 0 };
-	static char afterBuff[MAXBUF] = { 0 };
-	int i = 0;
-	while(i <= pos){
-		beforeBuff[i] = buff[i];
-		i++;
+void insertCharAt(char *src, int pos, const char c){
+	int len = (int)strlen(src);
+	for(int i = len; i >= pos; i--){
+		src[i + 1] = src[i];
 	}
-	beforeBuff[i] = '\0';
-	i = pos + 1;
-	int j = 0;
-	while(i < (int)strlen(buff)){
-		afterBuff[j++] = buff[i];
-		i++;
-	}
-	afterBuff[j] = '\0';
-	sprintf(buff, "%s%c%s", beforeBuff, txt, afterBuff);
+	src[pos] = c;
 }
 
 
-void removeCharAt(char *buff, int pos){
-	for(int i = pos; i < (int)strlen(buff); i++){
-		buff[i] = buff[i + 1];
+void removeCharAt(char *src, int pos){
+	int len = (int)strlen(src);
+	for(int i = pos; i < len; i++){
+		src[i] = src[i  + 1];
 	}
 }
+
+
+void removeCharRange(char *src, int start, int end){
+	int len = (int)strlen(src);
+	if(start < 0 || end >= len || start > end){ return; }
+	for(int i = end + 1; i <= len; i++){
+		src[start++] = src[i];
+	}
+}
+
+
+// void insertCharAt(char *buff, int pos, const char txt){
+// 	static char beforeBuff[MAXBUF] = { 0 };
+// 	static char afterBuff[MAXBUF] = { 0 };
+// 	int i = 0;
+// 	while(i <= pos){
+// 		beforeBuff[i] = buff[i];
+// 		i++;
+// 	}
+// 	beforeBuff[i] = '\0';
+// 	i = pos + 1;
+// 	int j = 0;
+// 	while(i < (int)strlen(buff)){
+// 		afterBuff[j++] = buff[i];
+// 		i++;
+// 	}
+// 	afterBuff[j] = '\0';
+// 	sprintf(buff, "%s%c%s", beforeBuff, txt, afterBuff);
+// }
+
+
+// void removeCharAt(char *buff, int pos){
+// 	for(int i = pos; i < (int)strlen(buff); i++){
+// 		buff[i] = buff[i + 1];
+// 	}
+// }
 
 
 

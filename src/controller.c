@@ -182,10 +182,17 @@ typedef enum {
 void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 	switch(mode){
 		case INSERT_MODE:
-			insertCharAt(ctrl->buffer, (ctrl->index++ - 1), ch);
+			insertCharAt(ctrl->buffer, ctrl->index, ch);
+			ctrl->index++;
 			break;
 		case REMOVE_MODE:
-			removeCharAt(ctrl->buffer, --ctrl->index);
+			if(ctrl->cursor.mode == CURSOR_SELECT){
+				removeCharRange(ctrl->buffer, ctrl->cursor.selection.start, ctrl->cursor.selection.end);
+				ctrl->index = ctrl->cursor.selection.start;
+				ctrl->cursor.mode = CURSOR_WRITE;
+			} else {
+				removeCharAt(ctrl->buffer, --ctrl->index);
+			}
 			break;
 		default: break;
 	}
@@ -298,46 +305,49 @@ void updateController(controller_t *ctrl){
 	}
 
 
-	if(IsKeyPressed(KEY_RIGHT)){
+
+	// Cursor Selection Right
+	if(IsKeyPressed(KEY_RIGHT) && IsKeyDown(KEY_LEFT_SHIFT)){
+		if(ctrl->cursor.mode == CURSOR_WRITE){
+			ctrl->cursor.mode = CURSOR_SELECT;
+		} else {
+			ctrl->cursor.selection.end = ctrl->index;
+		}
+	}
+
+	// Cursor Selection Left
+	if(IsKeyPressed(KEY_LEFT) && IsKeyDown(KEY_LEFT_SHIFT)){
+		if(ctrl->cursor.mode == CURSOR_WRITE){
+			ctrl->cursor.selection.start = ctrl->index - 1;
+			ctrl->cursor.selection.end = ctrl->index   - 1;
+			ctrl->cursor.mode = CURSOR_SELECT;
+		} else {
+			ctrl->cursor.selection.start = ctrl->index - 1;
+		}
+	}
+
+
+	// Cursor movement
+	if(IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)){
 		if(ctrl->index < (int)strlen(ctrl->buffer)){
 			ctrl->index++;
 		}
 		ctrl->blinky = 1;
 	}
 
-
-	if(IsKeyPressed(KEY_LEFT)){
+	if(IsKeyPressed(KEY_LEFT) || IsKeyPressedRepeat(KEY_LEFT)){
 		if(ctrl->index){
 			ctrl->index--;
 		}
 		ctrl->blinky = 1;
 	}
 
-	if(IsKeyPressed(KEY_RIGHT) && IsKeyDown(KEY_LEFT_SHIFT)){
-		if(ctrl->cursor.mode == CURSOR_WRITE){
-			ctrl->cursor.selection.start = ctrl->index - 1;
-			ctrl->cursor.selection.end = ctrl->index;
-			ctrl->cursor.mode = CURSOR_SELECT;
-		} else {
-			ctrl->cursor.selection.end = ctrl->index;
-		}
-	}
 
-	if(IsKeyPressed(KEY_LEFT) && IsKeyDown(KEY_LEFT_SHIFT)){
-		if(ctrl->cursor.mode == CURSOR_WRITE){
-			ctrl->cursor.selection.end = ctrl->index + 1;
-			ctrl->cursor.selection.start = ctrl->index;
-			ctrl->cursor.mode = CURSOR_SELECT;
-		} else {
-			ctrl->cursor.selection.start = ctrl->index;
-		}
-	}
-
-
-
+	// Exit selection
 	if((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) && !IsKeyDown(KEY_LEFT_SHIFT)){
 		ctrl->cursor.selection.start = ctrl->index;
 		ctrl->cursor.selection.end = ctrl->index;
+		ctrl->cursor.mode = CURSOR_WRITE;
 	}
 
 

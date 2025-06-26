@@ -40,8 +40,7 @@ int main(){
 	while(!WindowShouldClose()){
 
 
-		DrawRectangle(0, 0, borderWidth, borderHeight, RED);  // Border
-
+		// DrawRectangle(0, 0, borderWidth, borderHeight, RED);  // Border
 
 		updateController(&ctrl);
 
@@ -84,7 +83,6 @@ int main(){
 		// controllerUpdateBuffer(&ctrl);
 		render_buffer(&ctrl);
 		// render_cursor(&ctrl, bg_color, 0);
-
 		EndDrawing();
 	}
 

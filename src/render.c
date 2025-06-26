@@ -1,4 +1,5 @@
 #include <raylib.h>
+#include <stdio.h>
 #include "controller.h"
 #include "config.h"
 
@@ -43,11 +44,9 @@ void render_buffer(controller_t *ctrl){
 	// if(ctrl->cursor.selection.start != ctrl->cursor.selection.end && ctrl->cursor.mode == CURSOR_SELECT){
 	// 	int nl = 0;  // Number of processed letters
 	// 	for(int i = 0; i < ctrl->lines.cln; i++){
-
 	// 		int x = -ctrl->hscroll + numLineSize;
 	// 		int y = (i * letter_factor)-ctrl->vscroll;
 	// 		int len = (int)strlen(ctrl->lines.lines[i]);
-
 	// 		for(int j = 0; j < len; j++){
 	// 			int width = letter_factor / 2;
 	// 			int lp = (j * letter_factor) / 2; // left-padding
@@ -55,24 +54,26 @@ void render_buffer(controller_t *ctrl){
 	// 				DrawRectangle(lp + x, y, width, ctrl->fontsize, YELLOW);
 	// 			}
 	// 		}
-
 	// 		nl += (len + 1);  // +1 for the line (\n)
 	// 	}
 	// }
 
 
-	if(ctrl->cursor.selection.start != ctrl->cursor.selection.end && ctrl->cursor.mode == CURSOR_SELECT){
+	// if(ctrl->cursor.selection.start != ctrl->cursor.selection.end && ctrl->cursor.mode == CURSOR_SELECT){
+	if(ctrl->cursor.mode == CURSOR_SELECT){
 		int nl = 0;  // Number of processed letters
 		for(int i = 0; i < ctrl->lines.cln; i++){
 
 			int x = -ctrl->hscroll + numLineSize;
 			int y = (i * letter_factor)-ctrl->vscroll;
+
 			int len = (int)strlen(ctrl->lines.lines[i]);
+
 
 			for(int j = 0; j < len; j++){
 				int width = letter_factor / 2;
 				int lp = (j * letter_factor) / 2; // left-padding
-				if((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end - 1){
+				if((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end){
 					DrawRectangle(lp + x, y, width, ctrl->fontsize, YELLOW);
 				}
 			}
@@ -80,6 +81,8 @@ void render_buffer(controller_t *ctrl){
 			nl += (len + 1);  // +1 for the line (\n)
 		}
 	}
+
+	render_cursor(ctrl, numLineSize);
 
 	// Render lines
 	for(int i = 0; i < ctrl->lines.cln; i++){
@@ -89,7 +92,6 @@ void render_buffer(controller_t *ctrl){
 	}
 
 
-	render_cursor(ctrl, numLineSize);
 }
 
 
@@ -99,7 +101,7 @@ void render_cursor(controller_t *ctrl, int padding){
 	updateCursorCurrentPos(ctrl);
 
 	const char *buffer = ctrl->buffer;
-	int width = 0, height = 0, spacing = 2, cursor_width = 3;
+	int width = 0, height = 0, spacing = 1, cursor_width = 2;
 
 	int factor = ctrl->fontsize + ctrl->spacing;
 
