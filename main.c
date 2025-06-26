@@ -83,6 +83,7 @@ int main(){
 		// controllerUpdateBuffer(&ctrl);
 		render_buffer(&ctrl);
 		// render_cursor(&ctrl, bg_color, 0);
+		// printf("%d\n", ctrl.lines.cln);
 		EndDrawing();
 	}
 

@@ -172,6 +172,48 @@ void controllerUpdateBuffer(controller_t *ctrl){
 }
 
 
+void getCurrentLineData(controller_t *ctrl, int *line, int *c){
+	int cl = 0, col = 0;  // Current Line, Column
+	for(int i = 0; i < ctrl->index; i++){
+		if(ctrl->buffer[i] == '\n'){
+			cl++;
+			col = 0;
+		} else {
+			col++;
+		}
+	}
+	if(line != NULL){ *line = cl; }
+	if(c != NULL){ *c = col; }
+}
+
+
+
+int getUpCursorDiff(controller_t *ctrl){
+	int lineN = 0, charN = 0;
+	getCurrentLineData(ctrl, &lineN, &charN);
+	if(lineN != 0){
+		int pLen = (int)strlen(ctrl->lines.lines[lineN - 1]);
+		if(charN > pLen){ charN = pLen; }
+		int afterDiff = pLen - charN;
+		return (afterDiff + charN) + 1;  // \n is included
+	}
+	return 0;
+}
+
+int getDownCursorDiff(controller_t *ctrl){
+	int lineN = 0, charN = 0;
+	getCurrentLineData(ctrl, &lineN, &charN);
+	int current = ctrl->lines.cln - 1;
+	if(lineN != current && current != 1){
+		int cLen = (int)strlen(ctrl->lines.lines[lineN]);
+		int aLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
+		int diff = ((cLen - charN) + charN + 1);
+		return diff;
+	}
+	return 0;
+}
+
+
 
 typedef enum {
 	INSERT_MODE,
@@ -326,6 +368,28 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
+	if(IsKeyPressed(KEY_UP) && IsKeyDown(KEY_LEFT_SHIFT)){
+		int diff = getUpCursorDiff(ctrl);
+		ctrl->cursor.selection.start = ctrl->index - diff;
+		ctrl->cursor.selection.end = ctrl->index - 1;
+		ctrl->cursor.mode = CURSOR_SELECT;
+		ctrl->blinky = 1;
+	}
+
+	if(IsKeyPressed(KEY_DOWN) && IsKeyDown(KEY_LEFT_SHIFT)){
+		int diff = getDownCursorDiff(ctrl);
+		ctrl->cursor.selection.start = ctrl->index;
+		ctrl->cursor.selection.end = ctrl->index + diff - 1;
+		ctrl->cursor.mode = CURSOR_SELECT;
+		ctrl->blinky = 1;
+	}
+
+	// if(IsKeyPressed(KEY_DOWN) && IsKeyDown(KEY_LEFT_SHIFT)){
+	// 	int diff = getDownCursorDiff(ctrl);
+	// 	ctrl->blinky = 1;
+	// }
+
+
 
 	// Cursor movement
 	if(IsKeyPressed(KEY_RIGHT) || IsKeyPressedRepeat(KEY_RIGHT)){
@@ -342,9 +406,19 @@ void updateController(controller_t *ctrl){
 		ctrl->blinky = 1;
 	}
 
+	if(IsKeyPressed(KEY_UP) || IsKeyPressedRepeat(KEY_UP)){
+		ctrl->index -= getUpCursorDiff(ctrl);
+		ctrl->blinky = 1;
+	}
+
+	if(IsKeyPressed(KEY_DOWN) || IsKeyPressedRepeat(KEY_DOWN)){
+		ctrl->index += getDownCursorDiff(ctrl);
+		ctrl->blinky = 1;
+	}
+
 
 	// Exit selection
-	if((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT)) && !IsKeyDown(KEY_LEFT_SHIFT)){
+	if((IsKeyPressed(KEY_LEFT) || IsKeyPressed(KEY_RIGHT) || IsKeyPressed(KEY_DOWN) || IsKeyPressed(KEY_UP)) && !IsKeyDown(KEY_LEFT_SHIFT)){
 		ctrl->cursor.selection.start = ctrl->index;
 		ctrl->cursor.selection.end = ctrl->index;
 		ctrl->cursor.mode = CURSOR_WRITE;
