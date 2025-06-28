@@ -25,7 +25,7 @@ const char* get_last_line(const char *buffer) {
 
 
 
-int getIntSize(int n){
+int getIntLen(int n){
 	static char buffer[124] = { 0 };
 	sprintf(buffer, "%d", n);
 	return (int)strlen(buffer);

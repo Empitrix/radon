@@ -6,6 +6,7 @@
 #include <unistd.h>
 #include "thread.h"
 #include "utils.h"
+#include "shaders.h"
 #include <stdlib.h>
 
 #define MAXBUF 1024 * 1024  // 1MB buffer
@@ -49,12 +50,18 @@ typedef struct {
 } cursor_t;
 
 
+typedef struct {
+	Shader shader;
+	char font_path[128];       // Font path buffer
+	char fs_file[128];         // Font path buffer
+	Font font;                 // Config Font
+} font_t; 
+
 
 
 typedef struct {
 	char buffer[MAXBUF];       // Buffer
-	char font_path[128];       // Font path buffer
-	Font font;                 // Config Font
+	font_t font;
 	uint32_t index;            // Index (Buf pos)
 	int tabsize;               // Tab size
 	int spacing;               // Letter spacing
@@ -68,6 +75,9 @@ typedef struct {
 	int windowHeight;          // Window Height
 	controllerBuffer lines;    // Splited lines
 	cursor_t cursor;
+
+	int wFactor;
+	int hFactor;
 } controller_t;
 
 
@@ -94,9 +104,14 @@ cursor_t cursorDefaultInit(void){
 }
 
 
+
+
 controller_t *controllerInit(controller_t *ctrl, const char* font_path, int fontsize, int tabsize, int spacing){
-	strcpy(ctrl->font_path, font_path);
-	ctrl->font = LoadFontEx(font_path, fontsize, NULL, 540);
+	if(!spacing){ spacing = 1; }
+	strcpy(ctrl->font.font_path, font_path);
+	strcpy(ctrl->font.fs_file, "assets/glsl330/sdf.fs");
+	// ctrl->font = LoadFontEx(font_path, fontsize, NULL, 540);
+	ctrl->font.font = fontLoadSDF(font_path, ctrl->font.fs_file, fontsize, &ctrl->font.shader);
 	ctrl->index = 0;                   // Current position
 	ctrl->tabsize = tabsize;           // Tab Size
 	ctrl->spacing = spacing;           // Letter Spacing
@@ -115,13 +130,20 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 
 	ctrl->cursor = cursorDefaultInit();
 
+	// Letter factor (each size (monospace))
+	int fac = ctrl->fontsize * ctrl->spacing;
+	ctrl->wFactor = fac / 2;
+	ctrl->hFactor = ctrl->fontsize;
+
 	return ctrl;
 }
 
 
 void controllerSetWindowSize(controller_t *ctrl, int width, int height){
 	ctrl->windowHeight = height;
-	ctrl->windowWidth = width * 2;
+	ctrl->windowWidth = width;
+
+	// ctrl->windowWidth = width * 2;
 }
 
 
@@ -288,7 +310,6 @@ void updateController(controller_t *ctrl){
 
 	if(ckey == KEY_ENTER){
 		modify_buffer(ctrl, '\n', INSERT_MODE);
-		// printf("%d\n", ctrl->vscroll);
 	}
 
 	if(ckey == KEY_TAB){
@@ -297,13 +318,15 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
+
+
 	if(IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)){
-		ctrl->hscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
+		ctrl->hscroll -= GetMouseWheelMove() * ctrl->font.font.baseSize;
 		if(ctrl->hscroll < 0){
 			ctrl->hscroll = 0;
 		}
 	} else {
-		ctrl->vscroll -= GetMouseWheelMove() * ctrl->font.baseSize;
+		ctrl->vscroll -= GetMouseWheelMove() * ctrl->font.font.baseSize;
 		if(ctrl->vscroll < 0){
 			ctrl->vscroll = 0;
 		}
@@ -311,23 +334,23 @@ void updateController(controller_t *ctrl){
 
 
 	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
-		if(IsFontValid(ctrl->font)){
+		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->fontsize < 255){
-				UnloadFont(ctrl->font);
-				ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
+				UnloadFont(ctrl->font.font);
+				// ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
+				ctrl->font.font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, ++ctrl->fontsize, &ctrl->font.shader);
 			}
 		}
-		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
 	}
 
 	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
-		if(IsFontValid(ctrl->font)){
+		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->fontsize > 1){
-				UnloadFont(ctrl->font);
-				ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
+				UnloadFont(ctrl->font.font);
+				// ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
+				ctrl->font.font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, --ctrl->fontsize, &ctrl->font.shader);
 			}
 		}
-		// SetWindowTitle(TextFormat("Rodon (%d)", ctrl->fontsize));
 	}
 
 	if ((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
@@ -383,11 +406,6 @@ void updateController(controller_t *ctrl){
 		ctrl->cursor.mode = CURSOR_SELECT;
 		ctrl->blinky = 1;
 	}
-
-	// if(IsKeyPressed(KEY_DOWN) && IsKeyDown(KEY_LEFT_SHIFT)){
-	// 	int diff = getDownCursorDiff(ctrl);
-	// 	ctrl->blinky = 1;
-	// }
 
 
 
