@@ -7,78 +7,11 @@
 #include "thread.h"
 #include "utils.h"
 #include "shaders.h"
+#include "config.h"
+#include "types.h"
 #include <stdlib.h>
 
-#define MAXBUF 1024 * 1024  // 1MB buffer
-#define MAXLINES 1024
 
-
-
-typedef struct {
-	char lines[MAXLINES][MAXBUF];      // 1GB holding buffer (TEMP SPACE)
-	char hold[MAXBUF];                 // 1MB holding line   (TEMP SPACE)
-	unsigned long int holdIdx;         // Hold index
-	int cln;                           // Current Line Number
-} controllerBuffer;
-
-
-typedef enum {
-	CURSOR_WRITE,
-	CURSOR_SELECT,
-} cursor_mode;
-
-
-typedef struct {
-	int x;
-	int y;
-} pos_t;
-
-
-typedef struct {
-	int start;
-	int end;
-} range_t;
-
-
-
-typedef struct {
-	cursor_mode mode;
-	range_t selection;         // Range of the selected text [start, end]
-	pos_t current;
-	pos_t extend;
-	int max;
-} cursor_t;
-
-
-typedef struct {
-	Shader shader;
-	char font_path[128];       // Font path buffer
-	char fs_file[128];         // Font path buffer
-	Font font;                 // Config Font
-} font_t; 
-
-
-
-typedef struct {
-	char buffer[MAXBUF];       // Buffer
-	font_t font;
-	uint32_t index;            // Index (Buf pos)
-	int tabsize;               // Tab size
-	int spacing;               // Letter spacing
-	int hscroll;               // Horizontal Scroll Offset
-	int vscroll;               // Vertical Scroll Offset
-	uint8_t blinky;            // Cursor
-	uint8_t fontsize;          // Font Size
-	int csize;                 // Char size
-	// int curosr;                // Cursor pos
-	int windowWidth;           // Window Width
-	int windowHeight;          // Window Height
-	controllerBuffer lines;    // Splited lines
-	cursor_t cursor;
-
-	int wFactor;
-	int hFactor;
-} controller_t;
 
 
 
@@ -111,14 +44,14 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 	strcpy(ctrl->font.font_path, font_path);
 	strcpy(ctrl->font.fs_file, "assets/glsl330/sdf.fs");
 	// ctrl->font = LoadFontEx(font_path, fontsize, NULL, 540);
-	ctrl->font.font = fontLoadSDF(font_path, ctrl->font.fs_file, fontsize, &ctrl->font.shader);
+	ctrl->font = fontLoadSDF(font_path, ctrl->font.fs_file, fontsize, spacing);
 	ctrl->index = 0;                   // Current position
 	ctrl->tabsize = tabsize;           // Tab Size
-	ctrl->spacing = spacing;           // Letter Spacing
+	// ctrl->font.spacing = spacing;           // Letter Spacing
+	// ctrl->font.fontsize = fontsize;         // Font Size
 	ctrl->hscroll = 0;                 // Horizontal Scroll Position
 	ctrl->vscroll = 0;                 // Vertical Scroll Position
 	ctrl->blinky = 1;                  // Cursor Blink
-	ctrl->fontsize = fontsize;         // Font Size
 	ctrl->csize = fontsize + spacing;  // Character Size
 	exe_thread(blink_cursor, ctrl);    // Start Blinky
 
@@ -131,9 +64,9 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 	ctrl->cursor = cursorDefaultInit();
 
 	// Letter factor (each size (monospace))
-	int fac = ctrl->fontsize * ctrl->spacing;
+	int fac = ctrl->font.fontsize * ctrl->font.spacing;
 	ctrl->wFactor = fac / 2;
-	ctrl->hFactor = ctrl->fontsize;
+	ctrl->hFactor = ctrl->font.fontsize;
 
 	return ctrl;
 }
@@ -159,10 +92,15 @@ void updateCursorCurrentPos(controller_t *ctrl){
 		}
 		i++;
 	}
+
 	ctrl->cursor.current.x = width - 1;
 	ctrl->cursor.current.y = height;
 
-	// ctrl->cursor.selection = (range_t){ ctrl->cursor.current.x,  ctrl->cursor.current.x };
+	if(ctrl->cursor.current.x < 0){
+		ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
+		ctrl->cursor.current.y--;
+	}
+
 }
 
 
@@ -335,20 +273,20 @@ void updateController(controller_t *ctrl){
 
 	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
 		if(IsFontValid(ctrl->font.font)){
-			if(ctrl->fontsize < 255){
+			if(ctrl->font.fontsize < 255){
 				UnloadFont(ctrl->font.font);
 				// ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
-				ctrl->font.font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, ++ctrl->fontsize, &ctrl->font.shader);
+				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, ++ctrl->font.fontsize, ctrl->font.spacing);
 			}
 		}
 	}
 
 	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
 		if(IsFontValid(ctrl->font.font)){
-			if(ctrl->fontsize > 1){
+			if(ctrl->font.fontsize > 1){
 				UnloadFont(ctrl->font.font);
 				// ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
-				ctrl->font.font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, --ctrl->fontsize, &ctrl->font.shader);
+				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, --ctrl->font.fontsize, ctrl->font.spacing);
 			}
 		}
 	}

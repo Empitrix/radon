@@ -51,7 +51,7 @@ void render_buffer(controller_t *ctrl){
 
 		DrawRectangle(0, i - ctrl->hFactor, numLineSize, ctrl->hFactor, selected ? BLACK : GRAY);
 		if(lNum < ctrl->lines.cln + 1){
-			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->fontsize - 2, ctrl->spacing, selected ? YELLOW : BLACK);
+			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : BLACK);
 		}
 	}
 
@@ -70,7 +70,7 @@ void render_buffer(controller_t *ctrl){
 				int width = ctrl->wFactor / 2;
 				int lp = (j * ctrl->wFactor) / 2; // left-padding
 				if((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end){
-					DrawRectangle(lp + x, y, width, ctrl->fontsize, YELLOW);
+					DrawRectangle(lp + x, y, width, ctrl->font.fontsize, YELLOW);
 				}
 			}
 
@@ -90,7 +90,7 @@ void render_buffer(controller_t *ctrl){
 		// DrawTextEx(ctrl->font, ctrl->lines.lines[i], V2(x, y), ctrl->font.baseSize, ctrl->spacing, WHITE);
 
 		for(int j = 0; j < strlen(ctrl->lines.lines[i]); j++){
-			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->fontsize, WHITE);
+			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->font.fontsize, WHITE);
 		}
 
 	}
@@ -110,10 +110,11 @@ void render_cursor(controller_t *ctrl, int padding){
 
 	width = ctrl->cursor.current.x;
 	height = ctrl->cursor.current.y;
+
 	if(ctrl->blinky){
 		int x = ((width * ctrl->wFactor) + spacing) - ctrl->hscroll + padding;
 		int y = (height * ctrl->hFactor) - ctrl->vscroll;
-		DrawRectangle(x, y, cursor_width, ctrl->fontsize, BLUE);
+		DrawRectangle(x, y, cursor_width, ctrl->font.fontsize, BLUE);
 	}
 
 }

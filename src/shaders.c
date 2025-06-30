@@ -1,10 +1,11 @@
+#include <string.h>
 #include <raylib.h>
+#include "types.h"
 
 
-Font fontLoadSDF(const char *font_file, const char *shader_file, int size, Shader *shader){
+font_t fontLoadSDF(const char *font_file, const char *shader_file, int size, int spacing){
 	int fileSize = 0;
 	unsigned char *fileData = LoadFileData(font_file, &fileSize);
-	// int glyph = 95;
 	int glyph = 95;
 
 
@@ -17,8 +18,19 @@ Font fontLoadSDF(const char *font_file, const char *shader_file, int size, Shade
 	UnloadImage(atlas);
 
 	UnloadFileData(fileData);
-	*shader = LoadShader(0, shader_file);
+	Shader shader = LoadShader(0, shader_file);
 	SetTextureFilter(fontSDF.texture, TEXTURE_FILTER_BILINEAR);
-	return fontSDF;
+
+	font_t f = (font_t){
+		.font = fontSDF,
+		.shader = shader,
+		.fontsize = size,
+		.spacing = spacing
+	};
+
+	strcpy(f.font_path, font_file);
+	strcpy(f.fs_file, shader_file);
+
+	return f;
 }
 
