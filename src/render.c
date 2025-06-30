@@ -14,10 +14,10 @@ static int fontLoaded = 0;
 
 void render_buffer(controller_t *ctrl){
 
-	// DrawRectangle(0, 0, ctrl->windowWidth, ctrl->windowHeight, (Color){26, 27, 38, 255});
+	DrawRectangle(0, 0, ctrl->windowWidth, ctrl->windowHeight, (Color){26, 27, 38, 255});
 
 
-	DrawRectangle(0, 0, ctrl->windowWidth, ctrl->windowHeight, RED);  // Border
+	// DrawRectangle(0, 0, ctrl->windowWidth, ctrl->windowHeight, RED);  // Border
 
 	const char *start = ctrl->buffer;
 	int margin = 0;
@@ -33,13 +33,6 @@ void render_buffer(controller_t *ctrl){
 
 	getCurrentLineData(ctrl, &cln, NULL);
 
-	// This is jsut a random text 1234, return NULL;
-
-	// if(!fontLoaded){
-	// 	// lineF = LoadFont("assets/CourierPrime-Bold.ttf");
-	// 	ctrl->font = fontLoadSDF(ctrl->font.font_path, "assets/glsl330/sdf.fs", ctrl->fontsize, &shader);
-	// 	fontLoaded = 1;
-	// }
 
 	BeginShaderMode(ctrl->font.shader);
 
@@ -49,12 +42,14 @@ void render_buffer(controller_t *ctrl){
 		int lNum = i / ctrl->hFactor;  // line number
 		int selected = cln == (lNum - 1);
 
-		DrawRectangle(0, i - ctrl->hFactor, numLineSize, ctrl->hFactor, selected ? BLACK : GRAY);
+		// DrawRectangle(0, i - ctrl->hFactor, numLineSize, ctrl->hFactor, selected ? BLACK : GRAY);
 		if(lNum < ctrl->lines.cln + 1){
-			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : BLACK);
+			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
 		}
 	}
 
+	numLineSize += 12;
 
 	if(ctrl->cursor.mode == CURSOR_SELECT){
 		int nl = 0;  // Number of processed letters
@@ -67,10 +62,10 @@ void render_buffer(controller_t *ctrl){
 
 
 			for(int j = 0; j < len; j++){
-				int width = ctrl->wFactor / 2;
-				int lp = (j * ctrl->wFactor) / 2; // left-padding
+				int lp = j * ctrl->wFactor; // left-padding
 				if((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end){
-					DrawRectangle(lp + x, y, width, ctrl->font.fontsize, YELLOW);
+					// (Color){ 16, 128, 188, 255 };  // Selection color in chromium
+					DrawRectangle(lp + x, y, ctrl->wFactor, ctrl->font.fontsize, YELLOW);
 				}
 			}
 
@@ -78,21 +73,24 @@ void render_buffer(controller_t *ctrl){
 		}
 	}
 
-	numLineSize += 2;
 
 	render_cursor(ctrl, numLineSize);
 
 
 	// Render lines
+	int nl = 0;  // Number of processed letters
 	for(int i = 0; i < ctrl->lines.cln; i++){
 		int x = -ctrl->hscroll + numLineSize;
 		int y = (i * ctrl->hFactor)-ctrl->vscroll;
 		// DrawTextEx(ctrl->font, ctrl->lines.lines[i], V2(x, y), ctrl->font.baseSize, ctrl->spacing, WHITE);
 
-		for(int j = 0; j < strlen(ctrl->lines.lines[i]); j++){
-			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->font.fontsize, WHITE);
-		}
+		int len = strlen(ctrl->lines.lines[i]);
+		for(int j = 0; j < len; j++){
+			int selected = ((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end) && ctrl->cursor.mode == CURSOR_SELECT;
 
+			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->font.fontsize, selected ? BLACK : WHITE);
+		}
+		nl += (len + 1);  // +1 for the line (\n)
 	}
 
 

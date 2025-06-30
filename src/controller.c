@@ -193,7 +193,9 @@ void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 				ctrl->index = ctrl->cursor.selection.start;
 				ctrl->cursor.mode = CURSOR_WRITE;
 			} else {
-				removeCharAt(ctrl->buffer, --ctrl->index);
+				if(ctrl->index > 0){
+					removeCharAt(ctrl->buffer, --ctrl->index);
+				}
 			}
 			break;
 		default: break;
@@ -203,25 +205,43 @@ void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 	ctrl->blinky = 1;
 }
 
-void remove_word(controller_t *ctrl){
-	while (ctrl->index > 0) {
-		// Remove trailing spaces or punctuation first
-		char c = ctrl->buffer[ctrl->index - 1];
-		if (!isalnum(c)) {
-			ctrl->buffer[--ctrl->index] = '\0';
-		} else {
-			break;
-		}
+
+
+int getPreviusPos(controller_t *ctrl){
+	if (ctrl->index <= 0 || ctrl->index > strlen(ctrl->buffer)){
+		return ctrl->index;
 	}
 
-	while(ctrl->index > 0) {
-		char c = ctrl->buffer[ctrl->index - 1];
-		if (isalnum(c)) {
-			ctrl->buffer[--ctrl->index] = '\0';
-		} else {
-			break;
-		}
+	// Step back from pos - 1 while skipping spaces
+	int i = ctrl->index - 1;
+	while (i >= 0 && isspace((unsigned char)ctrl->buffer[i])) {
+		i--;
 	}
+
+	// Step back over the word
+	while (i >= 0 && !isspace((unsigned char)ctrl->buffer[i])) {
+		i--;
+	}
+
+	return i + 1;
+}
+
+
+
+void remove_word(controller_t *ctrl){
+	int pPos = getPreviusPos(ctrl);
+
+	int wordStart = pPos;
+	int wordEnd = ctrl->index;
+
+	// Shift the rest of the string to the left
+	for (int j = wordEnd; ; j++, wordStart++) {
+		ctrl->buffer[wordStart] = ctrl->buffer[j];
+		if (ctrl->buffer[j] == '\0') break;
+	}
+
+	// Update cursor (index)
+	ctrl->index = pPos;
 	ctrl->blinky = 1;
 }
 
@@ -234,17 +254,14 @@ void updateController(controller_t *ctrl){
 
 	KeyboardKey ckey = GetKeyPressed();
 
-	if (ckey == KEY_BACKSPACE && ctrl->index != 0) {
-		if (IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) {
+	if(IsKeyPressed(KEY_BACKSPACE) || IsKeyPressedRepeat(KEY_BACKSPACE)){
+		if (IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) {
 			remove_word(ctrl);
 		} else {
 			modify_buffer(ctrl, '\0', REMOVE_MODE);
 		}
 	}
 
-	if(IsKeyPressedRepeat(KEY_BACKSPACE) && ctrl->index != 0){
-		modify_buffer(ctrl, '\0', REMOVE_MODE);
-	}
 
 	if(ckey == KEY_ENTER){
 		modify_buffer(ctrl, '\n', INSERT_MODE);
@@ -277,6 +294,9 @@ void updateController(controller_t *ctrl){
 				UnloadFont(ctrl->font.font);
 				// ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
 				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, ++ctrl->font.fontsize, ctrl->font.spacing);
+				int fac = ctrl->font.fontsize * ctrl->font.spacing;
+				ctrl->wFactor = fac / 2;
+				ctrl->hFactor = ctrl->font.fontsize;
 			}
 		}
 	}
@@ -287,6 +307,9 @@ void updateController(controller_t *ctrl){
 				UnloadFont(ctrl->font.font);
 				// ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
 				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, --ctrl->font.fontsize, ctrl->font.spacing);
+				int fac = ctrl->font.fontsize * ctrl->font.spacing;
+				ctrl->wFactor = fac / 2;
+				ctrl->hFactor = ctrl->font.fontsize;
 			}
 		}
 	}
@@ -329,6 +352,7 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
+	// Cursor Selection to UP
 	if(IsKeyPressed(KEY_UP) && IsKeyDown(KEY_LEFT_SHIFT)){
 		int diff = getUpCursorDiff(ctrl);
 		ctrl->cursor.selection.start = ctrl->index - diff;
@@ -337,10 +361,18 @@ void updateController(controller_t *ctrl){
 		ctrl->blinky = 1;
 	}
 
+	// Cursor Selection to DOWN
 	if(IsKeyPressed(KEY_DOWN) && IsKeyDown(KEY_LEFT_SHIFT)){
 		int diff = getDownCursorDiff(ctrl);
 		ctrl->cursor.selection.start = ctrl->index;
 		ctrl->cursor.selection.end = ctrl->index + diff - 1;
+		ctrl->cursor.mode = CURSOR_SELECT;
+		ctrl->blinky = 1;
+	}
+
+	if(IsKeyPressed(KEY_A) && IsKeyDown(KEY_LEFT_CONTROL)){
+		ctrl->cursor.selection.start = 0;
+		ctrl->cursor.selection.end = strlen(ctrl->buffer) - 1;
 		ctrl->cursor.mode = CURSOR_SELECT;
 		ctrl->blinky = 1;
 	}
