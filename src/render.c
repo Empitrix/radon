@@ -36,18 +36,21 @@ void render_buffer(controller_t *ctrl){
 
 	BeginShaderMode(ctrl->font.shader);
 
-	// Render Numbers
-	for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
-			
-		int lNum = i / ctrl->hFactor;  // line number
-		int selected = cln == (lNum - 1);
+	// // Render Numbers
+	// for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
+	// 		
+	// 	int lNum = i / ctrl->hFactor;  // line number
+	// 	int selected = cln == (lNum - 1);
 
-		// DrawRectangle(0, i - ctrl->hFactor, numLineSize, ctrl->hFactor, selected ? BLACK : GRAY);
-		if(lNum < ctrl->lines.cln + 1){
-			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
-			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
-		}
-	}
+	// 	// DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, selected ? BLACK : GRAY);
+	// 	DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, (Color){26, 27, 38, 255});
+
+
+	// 	if(lNum < ctrl->lines.cln + 1){
+	// 		// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+	// 		DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+	// 	}
+	// }
 
 	numLineSize += 12;
 
@@ -91,6 +94,25 @@ void render_buffer(controller_t *ctrl){
 			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->font.fontsize, selected ? BLACK : WHITE);
 		}
 		nl += (len + 1);  // +1 for the line (\n)
+	}
+
+
+
+	// Render Numbers
+	for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
+			
+		int lNum = i / ctrl->hFactor;  // line number
+		int selected = cln == (lNum - 1);
+
+		// DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, selected ? BLACK : GRAY);
+		DrawRectangle(0, i - ctrl->hFactor, (numLineSize - 12) + 7, ctrl->hFactor, (Color){26, 27, 38, 255});
+
+
+		if(lNum < ctrl->lines.cln + 1){
+			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor) -ctrl->vscroll), ctrl->font.fontsize, ctrl->font.spacing, selected ? YELLOW : GRAY);
+		}
 	}
 
 

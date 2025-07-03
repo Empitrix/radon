@@ -153,22 +153,27 @@ int getUpCursorDiff(controller_t *ctrl){
 	getCurrentLineData(ctrl, &lineN, &charN);
 	if(lineN != 0){
 		int pLen = (int)strlen(ctrl->lines.lines[lineN - 1]);
-		if(charN > pLen){ charN = pLen; }
-		int afterDiff = pLen - charN;
-		return (afterDiff + charN) + 1;  // \n is included
+		int afterPLine = (pLen - charN);
+		if(afterPLine < 0){
+			return  charN + 1;
+		}
+		return  afterPLine + charN + 1;
 	}
 	return 0;
 }
+
 
 int getDownCursorDiff(controller_t *ctrl){
 	int lineN = 0, charN = 0;
 	getCurrentLineData(ctrl, &lineN, &charN);
 	int current = ctrl->lines.cln - 1;
-	if(lineN != current && current != 1){
-		int cLen = (int)strlen(ctrl->lines.lines[lineN]);
-		int aLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
-		int diff = ((cLen - charN) + charN + 1);
-		return diff;
+	if(lineN != current && current != 0){
+		int cLineEnd = (int)strlen(ctrl->lines.lines[lineN]) - charN + 1;
+		int aLineLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
+		if((aLineLen - charN) < 0){
+			return cLineEnd + aLineLen;
+		}
+		return cLineEnd + charN;
 	}
 	return 0;
 }
