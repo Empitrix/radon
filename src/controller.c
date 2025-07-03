@@ -461,8 +461,6 @@ void updateController(controller_t *ctrl){
 
 				if((x <= aX && x >= xPx) && (y <= aY && y >= yPx)){
 					ctrl->index = i - 1;
-					putchar('^');
-					putchar('\n');
 					break;
 				}
 
