@@ -197,6 +197,8 @@ void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 				removeCharRange(ctrl->buffer, ctrl->cursor.selection.start, ctrl->cursor.selection.end);
 				ctrl->index = ctrl->cursor.selection.start;
 				ctrl->cursor.mode = CURSOR_WRITE;
+				// Set the cursor at [0, 0] if there is nothing
+				if((int)strlen(ctrl->buffer) == 0){ ctrl->hscroll = 0; ctrl->vscroll = 0; }
 			} else {
 				if(ctrl->index > 0){
 					removeCharAt(ctrl->buffer, --ctrl->index);
@@ -293,7 +295,7 @@ void updateController(controller_t *ctrl){
 	}
 
 
-	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
+	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_UP)){
 		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->font.fontsize < 255){
 				UnloadFont(ctrl->font.font);
@@ -306,7 +308,7 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
-	if((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
+	if((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_PAGE_DOWN)){
 		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->font.fontsize > 1){
 				UnloadFont(ctrl->font.font);
@@ -319,7 +321,7 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
-	if ((IsKeyDown(KEY_LEFT_SHIFT) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
+	if ((IsKeyDown(KEY_LEFT_CONTROL) || IsKeyDown(KEY_RIGHT_CONTROL)) && IsKeyPressed(KEY_V)) {
 		const char *text = GetClipboardText();
 		for(int i = 0; i < (int)strlen(text); i++){
 			switch(text[i]){
@@ -379,6 +381,7 @@ void updateController(controller_t *ctrl){
 		ctrl->cursor.selection.start = 0;
 		ctrl->cursor.selection.end = strlen(ctrl->buffer) - 1;
 		ctrl->cursor.mode = CURSOR_SELECT;
+		ctrl->index = (int)strlen(ctrl->buffer);
 		ctrl->blinky = 1;
 	}
 
@@ -434,6 +437,40 @@ void updateController(controller_t *ctrl){
 		}
 		if(ctrl->index > 0){ ctrl->index++; }
 	}
+
+
+
+	// Set cursor pos by Mouse click
+	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
+		int x = GetMouseX();
+		int y = GetMouseY();
+		if(x <= ctrl->windowWidth && y <= ctrl->windowHeight){
+			int xPx = 0, yPx = 0;
+			int i = 0;
+			while(ctrl->buffer[i] != '\0'){
+
+				if(ctrl->buffer[i] == '\n'){
+					yPx += ctrl->hFactor;
+					xPx = 0;
+				} else {
+					xPx += ctrl->wFactor;
+				}
+
+				int aX = xPx + ctrl->wFactor;
+				int aY = yPx + ctrl->hFactor;
+
+				if((x <= aX && x >= xPx) && (y <= aY && y >= yPx)){
+					ctrl->index = i - 1;
+					putchar('^');
+					putchar('\n');
+					break;
+				}
+
+				i++;
+			}
+		}
+	}
+
 
 }
 
