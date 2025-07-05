@@ -55,11 +55,6 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 	ctrl->csize = fontsize + spacing;  // Character Size
 	exe_thread(blink_cursor, ctrl);    // Start Blinky
 
-	// Init controller Buffer
-	memset(ctrl->lines.lines, 0, sizeof(ctrl->lines.lines));
-	memset(ctrl->lines.hold, 0, sizeof(ctrl->lines.hold));
-	ctrl->lines.cln = 0;
-	ctrl->lines.holdIdx = 0;
 
 	ctrl->cursor = cursorDefaultInit();
 
@@ -70,6 +65,113 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 
 	return ctrl;
 }
+
+
+
+/* getCurrentLineLength: returns the current line length (that cursor is in)*/
+int getCurrentLineLength(controller_t *ctrl){
+	int i = 0, start = 0, len = 0;
+
+	while(ctrl->buffer[i] != '\0'){
+		if(i == ctrl->index){ break; }
+		if(ctrl->buffer[i] == '\n'){ start = i; }
+		i++;
+	}
+
+	if(strlen(ctrl->buffer) != start){
+		if(start != 0){ start++; }
+		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
+			start++;
+			len++;
+		}
+	}
+	return len;
+}
+
+
+/* getPreviusLineLength: returns the previus line length (one above the cursor)*/
+int getPreviusLineLength(controller_t *ctrl){
+	int i = 0, start = 0, len = 0;
+
+	while(ctrl->buffer[i] != '\0'){
+		if(i == ctrl->index){ break; }
+		if(ctrl->buffer[i] == '\n'){ start = i; }
+		i++;
+	}
+
+	if(strlen(ctrl->buffer) != start && start != 0){
+		if(start != 0){ start--; }
+		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
+			start--;
+			len++;
+		}
+	}
+	return len;
+}
+
+
+/* getNexLineLength: returns the next line length (one under the cursor)*/
+int getNexLineLength(controller_t *ctrl){
+	int i = 0, start = 0, len = 0;
+
+	while(ctrl->buffer[i] != '\0'){
+		if(i == ctrl->index){ break; }
+		if(ctrl->buffer[i] == '\n'){ start = i; }
+		i++;
+	}
+
+	if(strlen(ctrl->buffer) != start){
+		if(start != 0){ start++; }
+		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){ start++; }
+		if(ctrl->buffer[start] != '\0'){
+			if(start != (int)strlen(ctrl->buffer)){ start++; }
+			while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
+				start++;
+				len++;
+			}
+		}
+	}
+	return len;
+}
+
+
+/* getMaxLines: maximum lines in controller_t's buffer */
+int getMaxLines(controller_t *ctrl){
+	int i = 0, l = 0;
+	while(ctrl->buffer[i] != '\0'){
+		if(ctrl->buffer[i] == '\n'){ l++; }
+		i++;
+	}
+	if(i != 0){ l++; }
+	return l;
+}
+
+
+/* getLineLength: returns the length of the specified line num from the ctrl's buffer */
+int getLineLength(controller_t *ctrl, int num){
+	int i = 0, l = 0;
+	int len = 0;
+	
+	if(num > getMaxLines(ctrl) - 1){ return 0; }
+
+	while(ctrl->buffer[i] != '\0'){
+
+		if(l == num){
+			int start = 0;
+			while(ctrl->buffer[start + i] != '\n' && ctrl->buffer[start + i] != '\0'){
+				len++;
+				start++;
+			}
+			break;
+		}
+		if(ctrl->buffer[i] == '\n'){ l++; }
+		i++;
+	}
+	return len;
+}
+
+
+
 
 
 void controllerSetWindowSize(controller_t *ctrl, int width, int height){
@@ -97,7 +199,11 @@ void updateCursorCurrentPos(controller_t *ctrl){
 	ctrl->cursor.current.y = height;
 
 	if(ctrl->cursor.current.x < 0){
-		ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
+		// ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
+		// ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
+		ctrl->cursor.current.x = getLineLength(ctrl, ctrl->cursor.current.y - 1);
+		// printf("%d = %d\n", ctrl->cursor.current.x, getLineLength(ctrl, ctrl->cursor.current.y - 1));
+		// ctrl->cursor.current.x = getLineLength(ctrl, ctrl->cursor.current.y - 1);
 		ctrl->cursor.current.y--;
 	}
 
@@ -105,6 +211,7 @@ void updateCursorCurrentPos(controller_t *ctrl){
 
 
 
+/*
 void controllerUpdateBuffer(controller_t *ctrl){
 	// lines[cln][...........]
 	//           hold[holdIdx]
@@ -130,6 +237,7 @@ void controllerUpdateBuffer(controller_t *ctrl){
 	ctrl->cursor.max = (int)strlen(ctrl->lines.lines[ctrl->lines.cln - 1]);
 
 }
+*/
 
 
 void getCurrentLineData(controller_t *ctrl, int *line, int *c){
@@ -152,7 +260,9 @@ int getUpCursorDiff(controller_t *ctrl){
 	int lineN = 0, charN = 0;
 	getCurrentLineData(ctrl, &lineN, &charN);
 	if(lineN != 0){
-		int pLen = (int)strlen(ctrl->lines.lines[lineN - 1]);
+		// int pLen = (int)strlen(ctrl->lines.lines[lineN - 1]);
+		// printf("%d = %d\n", pLen, getLineLength(ctrl, lineN - 1));
+		int pLen = getLineLength(ctrl, lineN - 1);
 		int afterPLine = (pLen - charN);
 		if(afterPLine < 0){
 			return  charN + 1;
@@ -166,10 +276,16 @@ int getUpCursorDiff(controller_t *ctrl){
 int getDownCursorDiff(controller_t *ctrl){
 	int lineN = 0, charN = 0;
 	getCurrentLineData(ctrl, &lineN, &charN);
-	int current = ctrl->lines.cln - 1;
+	// int current = ctrl->lines.cln - 1;
+	int current = getMaxLines(ctrl);
+	if(current != 0){ current--; }
+	// printf("%d = %d\n", current, getMaxLines(ctrl));
 	if(lineN != current && current != 0){
-		int cLineEnd = (int)strlen(ctrl->lines.lines[lineN]) - charN + 1;
-		int aLineLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
+		// int cLineEnd = (int)strlen(ctrl->lines.lines[lineN]) - charN + 1;
+		// int aLineLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
+
+		int cLineEnd = getLineLength(ctrl, lineN) - charN + 1;
+		int aLineLen = getLineLength(ctrl, lineN + 1);
 		if((aLineLen - charN) < 0){
 			return cLineEnd + aLineLen;
 		}
@@ -469,6 +585,13 @@ void updateController(controller_t *ctrl){
 		}
 	}
 
+
+	// if(IsKeyPressed(KEY_LEFT_SHIFT)){
+	// 	// printf("%d\n", getCurrentLineLength(ctrl));
+	// 	// printf("%d\n", getPreviusLineLength(ctrl));
+	// 	// printf("%d\n", getNexLineLength(ctrl));
+	// 	printf("%d\n", getLineLength(ctrl, 1));
+	// }
 
 }
 

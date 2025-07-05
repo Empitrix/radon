@@ -22,10 +22,9 @@ void render_buffer(controller_t *ctrl){
 	const char *start = ctrl->buffer;
 	int margin = 0;
 
-	controllerUpdateBuffer(ctrl);
+	// controllerUpdateBuffer(ctrl);
 
-
-	int l = getIntLen(ctrl->lines.cln);
+	int l = getIntLen(getMaxLines(ctrl));
 
 	int numLineSize = l * ctrl->wFactor;
 
@@ -36,81 +35,60 @@ void render_buffer(controller_t *ctrl){
 
 	BeginShaderMode(ctrl->font.shader);
 
-	// // Render Numbers
-	// for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
-	// 		
-	// 	int lNum = i / ctrl->hFactor;  // line number
-	// 	int selected = cln == (lNum - 1);
-
-	// 	// DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, selected ? BLACK : GRAY);
-	// 	DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, (Color){26, 27, 38, 255});
-
-
-	// 	if(lNum < ctrl->lines.cln + 1){
-	// 		// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
-	// 		DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
-	// 	}
-	// }
-
 	numLineSize += 12;
 
 	if(ctrl->cursor.mode == CURSOR_SELECT){
-		int nl = 0;  // Number of processed letters
-		for(int i = 0; i < ctrl->lines.cln; i++){
+		int ch = 0;
+		int ln = 0;
+		for(int i = 0; i < (int)strlen(ctrl->buffer); i++){
 
-			int x = -ctrl->hscroll + numLineSize;
-			int y = (i * ctrl->hFactor)-ctrl->vscroll;
+			int x = (ch * ctrl->wFactor)-ctrl->hscroll + numLineSize;
+			int y = (ln * ctrl->hFactor)-ctrl->vscroll;
 
-			int len = (int)strlen(ctrl->lines.lines[i]);
-
-
-			for(int j = 0; j < len; j++){
-				int lp = j * ctrl->wFactor; // left-padding
-				if((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end){
-					// (Color){ 16, 128, 188, 255 };  // Selection color in chromium
-					DrawRectangle(lp + x, y, ctrl->wFactor, ctrl->font.fontsize, YELLOW);
-				}
+			if(ctrl->buffer[i] == '\n'){
+				ch = 0;
+				ln++;
+			} else {
+				ch++;
 			}
 
-			nl += (len + 1);  // +1 for the line (\n)
+
+			if(i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end){
+				DrawRectangle(x, y, ctrl->wFactor, ctrl->font.fontsize, YELLOW);
+			}
+
 		}
 	}
-
 
 	render_cursor(ctrl, numLineSize);
 
 
-	// Render lines
-	int nl = 0;  // Number of processed letters
-	for(int i = 0; i < ctrl->lines.cln; i++){
-		int x = -ctrl->hscroll + numLineSize;
-		int y = (i * ctrl->hFactor)-ctrl->vscroll;
-		// DrawTextEx(ctrl->font, ctrl->lines.lines[i], V2(x, y), ctrl->font.baseSize, ctrl->spacing, WHITE);
+	int chr = 0, ln = 0;
+	for(int i = 0; i < (int)strlen(ctrl->buffer); i++){
+		int selected = i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end && ctrl->cursor.mode == CURSOR_SELECT;
+		int x = (ctrl->wFactor * chr) -ctrl->hscroll + numLineSize;
+		int y = (ctrl->hFactor * ln) -ctrl->vscroll;
 
-		int len = strlen(ctrl->lines.lines[i]);
-		for(int j = 0; j < len; j++){
-			int selected = ((nl + j) >= ctrl->cursor.selection.start && (nl + j) <= ctrl->cursor.selection.end) && ctrl->cursor.mode == CURSOR_SELECT;
-
-			DrawTextCodepoint(ctrl->font.font, ctrl->lines.lines[i][j], V2(x + (j * ctrl->wFactor), y), ctrl->font.fontsize, selected ? BLACK : WHITE);
+		if(ctrl->buffer[i] == '\n'){
+			chr = 0;
+			ln++;
+			continue;
+		} else {
+			chr++;
 		}
-		nl += (len + 1);  // +1 for the line (\n)
-	}
 
+		DrawTextCodepoint(ctrl->font.font, ctrl->buffer[i], V2(x, y), ctrl->font.fontsize, selected ? BLACK : WHITE);
+	}
 
 
 	// Render Numbers
 	for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
-			
 		int lNum = i / ctrl->hFactor;  // line number
 		int selected = cln == (lNum - 1);
-
-		// DrawRectangle(0, i - ctrl->hFactor, numLineSize + 5, ctrl->hFactor, selected ? BLACK : GRAY);
 		DrawRectangle(0, i - ctrl->hFactor, (numLineSize - 12) + 7, ctrl->hFactor, (Color){26, 27, 38, 255});
-
-
-		if(lNum < ctrl->lines.cln + 1){
-			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(0, i - ctrl->hFactor), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
-			// DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor + 2) -ctrl->vscroll), ctrl->font.fontsize - 2, ctrl->font.spacing, selected ? YELLOW : GRAY);
+		int max = getMaxLines(ctrl);
+		if(max == 0){ max++; }
+		if((lNum - 1) < max){
 			DrawTextEx(ctrl->font.font, TextFormat("%*d", l, lNum), V2(2, (i - ctrl->hFactor) -ctrl->vscroll), ctrl->font.fontsize, ctrl->font.spacing, selected ? YELLOW : GRAY);
 		}
 	}

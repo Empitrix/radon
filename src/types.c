@@ -3,13 +3,6 @@
 #include "config.h"
 
 
-typedef struct {
-	char lines[MAXLINES][MAXBUF];      // 1GB holding buffer (TEMP SPACE)
-	char hold[MAXBUF];                 // 1MB holding line   (TEMP SPACE)
-	unsigned long int holdIdx;         // Hold index
-	int cln;                           // Current Line Number
-} controllerBuffer;
-
 
 typedef enum {
 	CURSOR_WRITE,
@@ -62,7 +55,7 @@ typedef struct {
 	// int curosr;                // Cursor pos
 	int windowWidth;           // Window Width
 	int windowHeight;          // Window Height
-	controllerBuffer lines;    // Splited lines
+
 	cursor_t cursor;
 
 	int wFactor;
