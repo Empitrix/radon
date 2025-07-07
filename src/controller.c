@@ -43,12 +43,9 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 	if(!spacing){ spacing = 1; }
 	strcpy(ctrl->font.font_path, font_path);
 	strcpy(ctrl->font.fs_file, "assets/glsl330/sdf.fs");
-	// ctrl->font = LoadFontEx(font_path, fontsize, NULL, 540);
 	ctrl->font = fontLoadSDF(font_path, ctrl->font.fs_file, fontsize, spacing);
 	ctrl->index = 0;                   // Current position
 	ctrl->tabsize = tabsize;           // Tab Size
-	// ctrl->font.spacing = spacing;           // Letter Spacing
-	// ctrl->font.fontsize = fontsize;         // Font Size
 	ctrl->hscroll = 0;                 // Horizontal Scroll Position
 	ctrl->vscroll = 0;                 // Vertical Scroll Position
 	ctrl->blinky = 1;                  // Cursor Blink
@@ -66,73 +63,6 @@ controller_t *controllerInit(controller_t *ctrl, const char* font_path, int font
 	return ctrl;
 }
 
-
-
-/* getCurrentLineLength: returns the current line length (that cursor is in)*/
-int getCurrentLineLength(controller_t *ctrl){
-	int i = 0, start = 0, len = 0;
-
-	while(ctrl->buffer[i] != '\0'){
-		if(i == ctrl->index){ break; }
-		if(ctrl->buffer[i] == '\n'){ start = i; }
-		i++;
-	}
-
-	if(strlen(ctrl->buffer) != start){
-		if(start != 0){ start++; }
-		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
-			start++;
-			len++;
-		}
-	}
-	return len;
-}
-
-
-/* getPreviusLineLength: returns the previus line length (one above the cursor)*/
-int getPreviusLineLength(controller_t *ctrl){
-	int i = 0, start = 0, len = 0;
-
-	while(ctrl->buffer[i] != '\0'){
-		if(i == ctrl->index){ break; }
-		if(ctrl->buffer[i] == '\n'){ start = i; }
-		i++;
-	}
-
-	if(strlen(ctrl->buffer) != start && start != 0){
-		if(start != 0){ start--; }
-		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
-			start--;
-			len++;
-		}
-	}
-	return len;
-}
-
-
-/* getNexLineLength: returns the next line length (one under the cursor)*/
-int getNexLineLength(controller_t *ctrl){
-	int i = 0, start = 0, len = 0;
-
-	while(ctrl->buffer[i] != '\0'){
-		if(i == ctrl->index){ break; }
-		if(ctrl->buffer[i] == '\n'){ start = i; }
-		i++;
-	}
-
-	if(strlen(ctrl->buffer) != start){
-		if(start != 0){ start++; }
-		while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){ start++; }
-		if(ctrl->buffer[start] != '\0'){
-			if(start != (int)strlen(ctrl->buffer)){ start++; }
-			while(ctrl->buffer[start] != '\n' && ctrl->buffer[start] != '\0'){
-				start++;
-				len++;
-			}
-		}
-	}
-	return len;
-}
 
 
 /* getMaxLines: maximum lines in controller_t's buffer */
@@ -177,8 +107,6 @@ int getLineLength(controller_t *ctrl, int num){
 void controllerSetWindowSize(controller_t *ctrl, int width, int height){
 	ctrl->windowHeight = height;
 	ctrl->windowWidth = width;
-
-	// ctrl->windowWidth = width * 2;
 }
 
 
@@ -199,45 +127,11 @@ void updateCursorCurrentPos(controller_t *ctrl){
 	ctrl->cursor.current.y = height;
 
 	if(ctrl->cursor.current.x < 0){
-		// ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
-		// ctrl->cursor.current.x = (int)strlen(ctrl->lines.lines[ctrl->cursor.current.y - 1]);
 		ctrl->cursor.current.x = getLineLength(ctrl, ctrl->cursor.current.y - 1);
-		// printf("%d = %d\n", ctrl->cursor.current.x, getLineLength(ctrl, ctrl->cursor.current.y - 1));
-		// ctrl->cursor.current.x = getLineLength(ctrl, ctrl->cursor.current.y - 1);
 		ctrl->cursor.current.y--;
 	}
 
 }
-
-
-
-/*
-void controllerUpdateBuffer(controller_t *ctrl){
-	// lines[cln][...........]
-	//           hold[holdIdx]
-	const char *start = ctrl->buffer;
-	memset(ctrl->lines.hold, '\0', sizeof(ctrl->lines.hold));
-	ctrl->lines.cln = 0;
-	ctrl->lines.holdIdx = 0;
-	while(*start){
-		if(*start == '\n'){
-			strcpy(ctrl->lines.lines[ctrl->lines.cln++], ctrl->lines.hold);
-			memset(ctrl->lines.hold, '\0', sizeof(ctrl->lines.hold));
-			ctrl->lines.holdIdx = 0;
-		} else {
-			ctrl->lines.hold[ctrl->lines.holdIdx++] = *start;
-		}
-		start++;
-	}
-	strcpy(ctrl->lines.lines[ctrl->lines.cln++], ctrl->lines.hold);
-
-
-
-	// Update curosr.max
-	ctrl->cursor.max = (int)strlen(ctrl->lines.lines[ctrl->lines.cln - 1]);
-
-}
-*/
 
 
 void getCurrentLineData(controller_t *ctrl, int *line, int *c){
@@ -255,13 +149,10 @@ void getCurrentLineData(controller_t *ctrl, int *line, int *c){
 }
 
 
-
 int getUpCursorDiff(controller_t *ctrl){
 	int lineN = 0, charN = 0;
 	getCurrentLineData(ctrl, &lineN, &charN);
 	if(lineN != 0){
-		// int pLen = (int)strlen(ctrl->lines.lines[lineN - 1]);
-		// printf("%d = %d\n", pLen, getLineLength(ctrl, lineN - 1));
 		int pLen = getLineLength(ctrl, lineN - 1);
 		int afterPLine = (pLen - charN);
 		if(afterPLine < 0){
@@ -276,14 +167,9 @@ int getUpCursorDiff(controller_t *ctrl){
 int getDownCursorDiff(controller_t *ctrl){
 	int lineN = 0, charN = 0;
 	getCurrentLineData(ctrl, &lineN, &charN);
-	// int current = ctrl->lines.cln - 1;
 	int current = getMaxLines(ctrl);
 	if(current != 0){ current--; }
-	// printf("%d = %d\n", current, getMaxLines(ctrl));
 	if(lineN != current && current != 0){
-		// int cLineEnd = (int)strlen(ctrl->lines.lines[lineN]) - charN + 1;
-		// int aLineLen = (int)strlen(ctrl->lines.lines[lineN + 1]);
-
 		int cLineEnd = getLineLength(ctrl, lineN) - charN + 1;
 		int aLineLen = getLineLength(ctrl, lineN + 1);
 		if((aLineLen - charN) < 0){
@@ -293,13 +179,6 @@ int getDownCursorDiff(controller_t *ctrl){
 	}
 	return 0;
 }
-
-
-
-typedef enum {
-	INSERT_MODE,
-	REMOVE_MODE,
-} insert_mode_t;
 
 
 void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
@@ -329,8 +208,45 @@ void modify_buffer(controller_t *ctrl, char ch, insert_mode_t mode){
 }
 
 
+void setCursorMouseClick(controller_t *ctrl){
+	int x = GetMouseX();
+	int y = GetMouseY();
+	if(x <= ctrl->windowWidth && y <= ctrl->windowHeight){
+		int xPx = 0, yPx = 0;
+		int i = 0;
+		while(ctrl->buffer[i] != '\0'){
 
-int getPreviusPos(controller_t *ctrl){
+			if(ctrl->buffer[i] == '\n'){
+				yPx += ctrl->hFactor;
+				xPx = 0;
+			} else {
+				xPx += ctrl->wFactor;
+			}
+
+			int aX = xPx + ctrl->wFactor;
+			int aY = yPx + ctrl->hFactor;
+
+			if((x <= aX && x >= xPx) && (y <= aY && y >= yPx)){
+				ctrl->index = i - 1;
+				break;
+			}
+
+			i++;
+		}
+	}
+}
+
+
+int getMaxCurrentIndex(controller_t *ctrl){
+	int i  = ctrl->index;
+	while(ctrl->buffer[i] != '\n' && i <= (int)strlen(ctrl->buffer)){
+		i++;
+	}
+	return i;
+}
+
+
+int getPreviusWordPos(controller_t *ctrl){
 	if (ctrl->index <= 0 || ctrl->index > strlen(ctrl->buffer)){
 		return ctrl->index;
 	}
@@ -350,9 +266,14 @@ int getPreviusPos(controller_t *ctrl){
 }
 
 
+int getNextWordPos(controller_t *ctrl){
+	return ctrl->index;
+}
+
+
 
 void remove_word(controller_t *ctrl){
-	int pPos = getPreviusPos(ctrl);
+	int pPos = getPreviusWordPos(ctrl);
 
 	int wordStart = pPos;
 	int wordEnd = ctrl->index;
@@ -415,7 +336,6 @@ void updateController(controller_t *ctrl){
 		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->font.fontsize < 255){
 				UnloadFont(ctrl->font.font);
-				// ctrl->font = LoadFontEx(ctrl->font_path, ++ctrl->fontsize, NULL, 540);
 				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, ++ctrl->font.fontsize, ctrl->font.spacing);
 				int fac = ctrl->font.fontsize * ctrl->font.spacing;
 				ctrl->wFactor = fac / 2;
@@ -428,7 +348,6 @@ void updateController(controller_t *ctrl){
 		if(IsFontValid(ctrl->font.font)){
 			if(ctrl->font.fontsize > 1){
 				UnloadFont(ctrl->font.font);
-				// ctrl->font = LoadFontEx(ctrl->font_path, --ctrl->fontsize, NULL, 540);
 				ctrl->font = fontLoadSDF(ctrl->font.font_path, ctrl->font.fs_file, --ctrl->font.fontsize, ctrl->font.spacing);
 				int fac = ctrl->font.fontsize * ctrl->font.spacing;
 				ctrl->wFactor = fac / 2;
@@ -452,7 +371,6 @@ void updateController(controller_t *ctrl){
 			}
 		}
 	}
-
 
 
 	// Cursor Selection Right
@@ -556,42 +474,11 @@ void updateController(controller_t *ctrl){
 
 
 
+
 	// Set cursor pos by Mouse click
 	if(IsMouseButtonPressed(MOUSE_BUTTON_LEFT)){
-		int x = GetMouseX();
-		int y = GetMouseY();
-		if(x <= ctrl->windowWidth && y <= ctrl->windowHeight){
-			int xPx = 0, yPx = 0;
-			int i = 0;
-			while(ctrl->buffer[i] != '\0'){
-
-				if(ctrl->buffer[i] == '\n'){
-					yPx += ctrl->hFactor;
-					xPx = 0;
-				} else {
-					xPx += ctrl->wFactor;
-				}
-
-				int aX = xPx + ctrl->wFactor;
-				int aY = yPx + ctrl->hFactor;
-
-				if((x <= aX && x >= xPx) && (y <= aY && y >= yPx)){
-					ctrl->index = i - 1;
-					break;
-				}
-
-				i++;
-			}
-		}
+		setCursorMouseClick(ctrl);
 	}
-
-
-	// if(IsKeyPressed(KEY_LEFT_SHIFT)){
-	// 	// printf("%d\n", getCurrentLineLength(ctrl));
-	// 	// printf("%d\n", getPreviusLineLength(ctrl));
-	// 	// printf("%d\n", getNexLineLength(ctrl));
-	// 	printf("%d\n", getLineLength(ctrl, 1));
-	// }
 
 }
 

@@ -9,6 +9,11 @@ typedef enum {
 	CURSOR_SELECT,
 } cursor_mode;
 
+typedef enum {
+	INSERT_MODE,
+	REMOVE_MODE,
+} insert_mode_t;
+
 
 typedef struct {
 	int x;

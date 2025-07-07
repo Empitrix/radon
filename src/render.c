@@ -1,5 +1,6 @@
 #include <raylib.h>
 #include <stdio.h>
+#include <stdint.h>
 #include "controller.h"
 #include "config.h"
 
@@ -37,6 +38,8 @@ void render_buffer(controller_t *ctrl){
 
 	numLineSize += 12;
 
+
+	// Show Selected Background
 	if(ctrl->cursor.mode == CURSOR_SELECT){
 		int ch = 0;
 		int ln = 0;
@@ -52,7 +55,6 @@ void render_buffer(controller_t *ctrl){
 				ch++;
 			}
 
-
 			if(i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end){
 				DrawRectangle(x, y, ctrl->wFactor, ctrl->font.fontsize, YELLOW);
 			}
@@ -60,9 +62,11 @@ void render_buffer(controller_t *ctrl){
 		}
 	}
 
+	// Render cursor
 	render_cursor(ctrl, numLineSize);
 
 
+	// Render Text
 	int chr = 0, ln = 0;
 	for(int i = 0; i < (int)strlen(ctrl->buffer); i++){
 		int selected = i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end && ctrl->cursor.mode == CURSOR_SELECT;
@@ -77,7 +81,27 @@ void render_buffer(controller_t *ctrl){
 			chr++;
 		}
 
-		DrawTextCodepoint(ctrl->font.font, ctrl->buffer[i], V2(x, y), ctrl->font.fontsize, selected ? BLACK : WHITE);
+
+		Color klr = selected ? BLACK : WHITE;
+
+
+		const char *word = "local";
+
+		// uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
+		// // uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
+		// if(start >= (uintptr_t)&ctrl->buffer[i + (int)strlen(word)] && start - 5 <= (uintptr_t)&ctrl->buffer[i]){
+		// 	klr = RED;
+		// }
+
+
+		uintptr_t start = (uintptr_t)strstr(ctrl->buffer, word);
+		// uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
+		if(start > (uintptr_t)&ctrl->buffer[i - (int)strlen(word)] && start <= (uintptr_t)&ctrl->buffer[i]){
+			klr = RED;
+		}
+
+
+		DrawTextCodepoint(ctrl->font.font, ctrl->buffer[i], V2(x, y), ctrl->font.fontsize, klr);
 	}
 
 
