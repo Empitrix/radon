@@ -2,7 +2,6 @@
 #include <stdint.h>
 #include <unistd.h>
 #include <string.h>
-#include <stdio.h>
 #include "src/render.h"
 #include "src/controller.h"
 

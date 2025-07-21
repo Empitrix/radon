@@ -1,5 +1,4 @@
 #include <raylib.h>
-#include <stdio.h>
 #include <stdint.h>
 #include "controller.h"
 #include "config.h"
@@ -48,6 +47,10 @@ void render_buffer(controller_t *ctrl){
 			int x = (ch * ctrl->wFactor)-ctrl->hscroll + numLineSize;
 			int y = (ln * ctrl->hFactor)-ctrl->vscroll;
 
+
+			int out_of_border_x = x > ctrl->windowWidth - ctrl->wFactor;
+			int out_of_border_y = y > ctrl->windowHeight - ctrl->hFactor;
+
 			if(ctrl->buffer[i] == '\n'){
 				ch = 0;
 				ln++;
@@ -55,7 +58,7 @@ void render_buffer(controller_t *ctrl){
 				ch++;
 			}
 
-			if(i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end){
+			if(i >= ctrl->cursor.selection.start && i <= ctrl->cursor.selection.end && (!out_of_border_x && !out_of_border_y)){
 				DrawRectangle(x, y, ctrl->wFactor, ctrl->font.fontsize, YELLOW);
 			}
 
@@ -73,6 +76,8 @@ void render_buffer(controller_t *ctrl){
 		int x = (ctrl->wFactor * chr) -ctrl->hscroll + numLineSize;
 		int y = (ctrl->hFactor * ln) -ctrl->vscroll;
 
+		// printf("[%d, %d] - %d\n", x, y, ctrl->windowWidth);
+
 		if(ctrl->buffer[i] == '\n'){
 			chr = 0;
 			ln++;
@@ -82,31 +87,33 @@ void render_buffer(controller_t *ctrl){
 		}
 
 
+		// Color klr = selected ? BLACK : WHITE;
 		Color klr = selected ? BLACK : WHITE;
 
+		int out_of_border_x = x > ctrl->windowWidth - ctrl->wFactor;
+		int out_of_border_y = y > ctrl->windowHeight - ctrl->hFactor;
 
-		const char *word = "local";
-
-		// uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
-		// // uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
-		// if(start >= (uintptr_t)&ctrl->buffer[i + (int)strlen(word)] && start - 5 <= (uintptr_t)&ctrl->buffer[i]){
-		// 	klr = RED;
+		// int out_of_border
+		// if(out_of_border_y || out_of_border_x){
+		// 	klr = BLACK;
 		// }
 
 
+		const char *word = "local";
 		uintptr_t start = (uintptr_t)strstr(ctrl->buffer, word);
-		// uintptr_t start = (uintptr_t)strstr(&ctrl->buffer[i], word);
 		if(start > (uintptr_t)&ctrl->buffer[i - (int)strlen(word)] && start <= (uintptr_t)&ctrl->buffer[i]){
 			klr = RED;
 		}
 
 
-		DrawTextCodepoint(ctrl->font.font, ctrl->buffer[i], V2(x, y), ctrl->font.fontsize, klr);
+		if(!out_of_border_x && !out_of_border_y){
+			DrawTextCodepoint(ctrl->font.font, ctrl->buffer[i], V2(x, y), ctrl->font.fontsize, klr);
+		}
 	}
 
 
 	// Render Numbers
-	for(int i = 0; i < ctrl->windowHeight; i += ctrl->hFactor){
+	for(int i = 0; i <= ctrl->windowHeight; i += ctrl->hFactor){
 		int lNum = i / ctrl->hFactor;  // line number
 		int selected = cln == (lNum - 1);
 		DrawRectangle(0, i - ctrl->hFactor, (numLineSize - 12) + 7, ctrl->hFactor, (Color){26, 27, 38, 255});
@@ -133,10 +140,19 @@ void render_cursor(controller_t *ctrl, int padding){
 	width = ctrl->cursor.current.x;
 	height = ctrl->cursor.current.y;
 
+
 	if(ctrl->blinky){
 		int x = ((width * ctrl->wFactor) + spacing) - ctrl->hscroll + padding;
 		int y = (height * ctrl->hFactor) - ctrl->vscroll;
-		DrawRectangle(x, y, cursor_width, ctrl->font.fontsize, BLUE);
+
+		int out_of_border_x = x > ctrl->windowWidth - ctrl->wFactor;
+		int out_of_border_y = y > ctrl->windowHeight - ctrl->hFactor;
+
+		// DrawRectangle(x, y, cursor_width, ctrl->font.fontsize, BLUE);
+		if(!out_of_border_x && !out_of_border_y){
+			DrawRectangle(x, y, cursor_width, ctrl->font.fontsize, BLUE);
+		}
+
 	}
 
 }

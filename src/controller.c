@@ -1,7 +1,6 @@
 #include <raylib.h>
 #include <stdint.h>
 #include <ctype.h>
-#include <stdio.h>
 #include <string.h>
 #include <unistd.h>
 #include "thread.h"
